@@ -1,0 +1,97 @@
+:root {
+  --pico-font-size: 87.5% !important;
+  --pico-border-radius: 0.5rem !important;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 1000px;
+  margin-inline: auto;
+  line-height: 1.2;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(123, 132, 149, 1);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(123, 132, 149, 0.9);
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-block: 0.5rem;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow: auto;
+  padding-inline: 1rem;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.5rem;
+  color: var(--pico-muted-color);
+}
+
+.chat-user {
+  margin-bottom: 0.25rem;
+}
+
+.chat-message-bubble {
+  background-color: var(--pico-primary-background);
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  width: max-content;
+  max-width: 95%;
+  white-space: pre-line;
+  color: var(--pico-primary-inverse);
+}
+
+.chat-form {
+  padding-inline: 1rem;
+}
+
+.chat-input {
+  margin-top: 0.5rem;
+}
+
+.chat-submit {
+  margin-bottom: 0.5rem;
+}
+
+.chat-link {
+  word-wrap: break-word;
+  word-break: break-word;
+}
+.chat-link a {
+  word-wrap: break-word;
+  word-break: break-word;
+}

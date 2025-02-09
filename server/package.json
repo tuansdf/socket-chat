@@ -1,0 +1,19 @@
+{
+  "name": "socket-chat-server",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch ./index.ts",
+    "build": "bun ./build.ts",
+    "start": "bun dist/index.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "cookie": "^1.0.2"
+  }
+}
