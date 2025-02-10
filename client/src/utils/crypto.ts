@@ -41,6 +41,7 @@ export const decryptToString = async (
 
 export const encrypt = async (contentBytes: Uint8Array, passwordHex: string): Promise<Uint8Array> => {
   try {
+    if (contentBytes.length === 0) return new Uint8Array(0);
     const password = hexToBytes(passwordHex);
     const cipher = getEncryptionFn(password);
     return cipher.encrypt(contentBytes);
@@ -51,6 +52,7 @@ export const encrypt = async (contentBytes: Uint8Array, passwordHex: string): Pr
 
 export const decrypt = async (contentBytes: Uint8Array, passwordHex: string): Promise<Uint8Array> => {
   try {
+    if (contentBytes.length === 0) return new Uint8Array(0);
     const password = hexToBytes(passwordHex);
     const cipher = getEncryptionFn(password);
     return cipher.decrypt(contentBytes);
