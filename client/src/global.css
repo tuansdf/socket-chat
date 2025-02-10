@@ -18,7 +18,7 @@ body,
 
 body {
   font-family: system-ui, sans-serif;
-  max-width: 1000px;
+  max-width: 900px;
   margin-inline: auto;
   line-height: 1.2;
 }
@@ -60,6 +60,10 @@ body {
   flex-direction: column;
   height: 100%;
   padding-block: 0.5rem;
+}
+
+.chat-header {
+  padding-inline: 1rem;
 }
 
 .chat-messages {

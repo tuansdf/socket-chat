@@ -1,20 +1,26 @@
 import { A, useLocation, useNavigate, useParams } from "@solidjs/router";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { appendUint8Array, decryptToString, encryptString, generateId, generatePassword } from "../utils/crypto.js";
-import { getCookie, openWebSocket, setCookie } from "../utils/utils.js";
+import { getOrSetCookie, openWebSocket, setCookie } from "../utils/utils.js";
 
 const ROOM_ID_KEY = "roomId";
 const USER_ID_KEY = "userId";
+const HANDSHAKE_KEY = "handshake";
 const FRIENDLY_USER_ID_LENGTH = 8;
 
 const METADATA_STRING_LENGTH = 80;
 const METADATA_BYTES_LENGTH = 120;
 
-const EVENT_SEND_MESSAGE = "01";
+const EVENT_SEND_MESSAGE = 1;
+const EVENT_USER_CONNECTED = 2;
+const EVENT_USER_DISCONNECTED = 3;
 
 type Metadata = {
-  u?: string;
-  e?: string;
+  u?: string; // userId
+  e?: number; // event
+  m?: string; // message
+  s?: string; // sessionId
+  x?: string; // handshake
 };
 
 export default function ChatPage() {
@@ -33,13 +39,10 @@ export default function ChatPage() {
     password = generatePassword();
     navigate(`${location.pathname}#${password}`, { replace: true });
   }
-  let roomId = params.roomId;
+  const roomId = params.roomId;
   setCookie(ROOM_ID_KEY, roomId);
-  let userId = getCookie(USER_ID_KEY);
-  if (!userId) {
-    userId = generateId();
-    setCookie(USER_ID_KEY, userId);
-  }
+  const handshake = getOrSetCookie(HANDSHAKE_KEY, generateId);
+  const userId = getOrSetCookie(USER_ID_KEY, generateId);
   const socket = openWebSocket("ws://localhost:3000", {
     onOpen: () => handleSocketOpen(),
     onMessage: async (e) => {
@@ -58,17 +61,37 @@ export default function ChatPage() {
 
   const handleSocketMessage = async (msg: string | Uint8Array) => {
     try {
+      let metadata: Metadata = {};
+      let content: string = "";
       if (typeof msg === "string") {
-        return addMessage(msg);
+        try {
+          metadata = JSON.parse(msg);
+          if (metadata.x !== handshake) return;
+        } catch (e) {
+          return;
+        }
+      } else {
+        const metadataPm = decryptToString(msg.slice(-METADATA_BYTES_LENGTH), password, false);
+        const contentPm = decryptToString(msg.slice(0, msg.length - METADATA_BYTES_LENGTH), password, true);
+        const promises = await Promise.all([metadataPm, contentPm]);
+        if (!promises[0] || !promises[1]) return;
+        metadata = JSON.parse(promises[0]) as Metadata;
+        content = promises[1];
       }
-      const metadataPm = decryptToString(msg.slice(-METADATA_BYTES_LENGTH), password, false);
-      const contentPm = decryptToString(msg.slice(0, msg.length - METADATA_BYTES_LENGTH), password, true);
-      const [metadataStr, content] = await Promise.all([metadataPm, contentPm]);
-      if (!content || !metadataStr) return;
-      const metadata = JSON.parse(metadataStr) as Metadata;
+      if (metadata.e === EVENT_USER_CONNECTED) {
+        return addMessage(
+          `User ${metadata.u?.substring(0, FRIENDLY_USER_ID_LENGTH)} (${metadata.s?.substring(0, FRIENDLY_USER_ID_LENGTH)}) connected`,
+        );
+      }
+      if (metadata.e === EVENT_USER_DISCONNECTED) {
+        return addMessage(
+          `User ${metadata.u?.substring(0, FRIENDLY_USER_ID_LENGTH)} (${metadata.s?.substring(0, FRIENDLY_USER_ID_LENGTH)}) disconnected`,
+        );
+      }
       if (metadata.e === EVENT_SEND_MESSAGE) {
-        addMessage(content, metadata.u);
+        return addMessage(content, metadata.u);
       }
+    } catch {
     } finally {
       scrollToBottom();
     }
@@ -100,7 +123,7 @@ export default function ChatPage() {
     messagesEl.scrollTo(0, messagesEl.scrollHeight);
   };
 
-  const inviteLink = `${window.location.origin}?roomId=${roomId}#${password}`;
+  const inviteLink = `${window.location.origin}/chat/${roomId}#${password}`;
 
   const handleInputKeyPress = async (event: KeyboardEvent) => {
     if (event.ctrlKey && event.key === "Enter") {
@@ -119,7 +142,7 @@ export default function ChatPage() {
 
   return (
     <main class="chat-container">
-      <A href="/">
+      <A href="/" class="chat-header">
         <h2>Messages</h2>
       </A>
       <div class="chat-messages" ref={messagesEl}>

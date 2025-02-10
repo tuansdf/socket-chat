@@ -11,6 +11,14 @@ export const getCookie = (key: string): string | undefined => {
   return cookie.parse(document.cookie)[key];
 };
 
+export const getOrSetCookie = (key: string, valueFn: () => string): string | undefined => {
+  const result = getCookie(key);
+  if (result) return result;
+  const value = valueFn();
+  setCookie(key, value);
+  return value;
+};
+
 export const openWebSocket = (
   url: string | URL,
   opts: {
