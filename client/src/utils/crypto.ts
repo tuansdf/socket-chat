@@ -2,6 +2,7 @@ import { xchacha20poly1305 } from "@noble/ciphers/chacha";
 import { bytesToHex, bytesToUtf8, hexToBytes, utf8ToBytes } from "@noble/ciphers/utils";
 import { managedNonce, randomBytes } from "@noble/ciphers/webcrypto";
 import Pako from "pako";
+import { ID_BYTES_LENGTH, PASSWORD_BYTES_LENGTH } from "../constants/common.constant.ts";
 
 const getEncryptionFn = managedNonce(xchacha20poly1305);
 
@@ -86,11 +87,11 @@ export const decompressToString = (data: Uint8Array) => {
 };
 
 export const generatePassword = () => {
-  return bytesToHex(randomBytes(32));
+  return bytesToHex(randomBytes(PASSWORD_BYTES_LENGTH));
 };
 
 export const generateId = () => {
-  return bytesToHex(randomBytes(16));
+  return bytesToHex(randomBytes(ID_BYTES_LENGTH));
 };
 
 export const appendUint8Array = (originalArray: Uint8Array, appendArray: Uint8Array) => {
