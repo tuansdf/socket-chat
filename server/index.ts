@@ -17,6 +17,7 @@ type Metadata = {
   e?: number; // event
   m?: string; // message
   s?: string; // sessionId
+  t?: number; // timestamp
 };
 
 const padUint8Array = (arr: Uint8Array, size: number, pad: number) => {
@@ -46,6 +47,7 @@ const createMetadata = (userId: string, sessionId: string, event?: number, messa
         u: userId,
         s: sessionId,
         m: message,
+        t: Date.now(),
       } as Metadata),
     ),
     SERVER_METADATA_BYTES_LENGTH,

@@ -25,6 +25,7 @@ type Metadata = {
   m?: string; // message
   n?: string; // name
   s?: string; // sessionId
+  t?: number; // timestamp
 };
 
 const toShortId = (id: string | undefined) => {
@@ -39,7 +40,7 @@ export default function ChatPage() {
   const [names, setNames] = createSignal<Record<string, string>>({});
   const [name, setName] = createSignal<string>("");
   const [message, setMessage] = createSignal<string>("");
-  const [messages, setMessages] = createSignal<{ userId?: string; content: string }[]>([]);
+  const [messages, setMessages] = createSignal<{ userId?: string; content: string; timestamp: Date }[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ roomId: string }>();
@@ -80,10 +81,16 @@ export default function ChatPage() {
       let content: string = "";
       const serverMetadata = JSON.parse(decoder.decode(msg.slice(-SERVER_METADATA_BYTES_LENGTH)).trim()) as Metadata;
       if (serverMetadata.e === EVENT_USER_CONNECTED) {
-        return addMessage(`User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) connected`);
+        return addMessage(
+          `User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) connected`,
+          new Date(serverMetadata.t!),
+        );
       }
       if (serverMetadata.e === EVENT_USER_DISCONNECTED) {
-        return addMessage(`User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) disconnected`);
+        return addMessage(
+          `User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) disconnected`,
+          new Date(serverMetadata.t!),
+        );
       }
 
       const metadataPm = decryptToString(
@@ -106,10 +113,10 @@ export default function ChatPage() {
         const name = metadata.n;
         if (!userId || !name) return;
         setNames((prev) => ({ ...prev, [userId]: name }));
-        addMessage(`User ${toShortId(userId)} updated their name to: ${name}`);
+        addMessage(`User ${toShortId(userId)} updated their name to: ${name}`, new Date(serverMetadata.t!));
       }
       if (metadata.e === EVENT_SEND_MESSAGE) {
-        return addMessage(content, serverMetadata.u);
+        return addMessage(content, new Date(serverMetadata.t!), serverMetadata.u);
       }
     } catch (e) {
     } finally {
@@ -117,13 +124,13 @@ export default function ChatPage() {
     }
   };
 
-  const addMessage = (msg: string, userId?: string) => {
-    setMessages((prev) => [...prev, { userId, content: msg }]);
+  const addMessage = (msg: string, timestamp: Date, userId?: string) => {
+    setMessages((prev) => [...prev, { userId, content: msg, timestamp }]);
   };
 
   const handleSubmit = async () => {
     try {
-      addMessage(message(), userId);
+      addMessage(message(), new Date(), userId);
       const metadata: Metadata = { e: EVENT_SEND_MESSAGE };
       const contentPm = encryptString(message(), password, true);
       const metadataPm = encryptMetadata(metadata, password);
@@ -146,7 +153,7 @@ export default function ChatPage() {
     const encryptedMetadata = await encryptMetadata(metadata, password);
     socket.send(encryptedMetadata);
     setNames((prev) => ({ ...prev, [userId]: targetName }));
-    addMessage(`User ${toShortId(userId)} updated their name to: ${targetName}`);
+    addMessage(`User ${toShortId(userId)} updated their name to: ${targetName}`, new Date());
     scrollToBottom();
   };
 
@@ -189,7 +196,12 @@ export default function ChatPage() {
               }}
             >
               <Show when={message.userId}>
-                <div class="chat-user">{names()[message.userId!] || toShortId(message.userId)}</div>
+                <div class="chat-user">
+                  <Show when={message.timestamp}>
+                    <span>{message.timestamp.toLocaleString()} - </span>
+                  </Show>
+                  <span>{names()[message.userId!] || toShortId(message.userId)}</span>
+                </div>
               </Show>
               <div class={message.userId ? "chat-message-bubble" : undefined}>{message.content}</div>
             </div>
