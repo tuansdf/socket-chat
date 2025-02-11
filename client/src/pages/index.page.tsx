@@ -6,10 +6,10 @@ export default function IndexPage() {
 
   return (
     <div class="welcome-container">
-      <article>
+      <div>
         <h1>Welcome to Socket Chat</h1>
         <button onClick={() => navigate(`/chat/${generateId()}`)}>Create a new room</button>
-      </article>
+      </div>
     </div>
   );
 }

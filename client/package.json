@@ -14,10 +14,12 @@
     "@solidjs/router": "^0.15.3",
     "cookie": "^1.0.2",
     "pako": "^2.1.0",
+    "qrcode": "^1.5.4",
     "solid-js": "^1.9.4"
   },
   "devDependencies": {
     "@types/pako": "^2.0.3",
+    "@types/qrcode": "^1.5.5",
     "postcss": "^8.4.49",
     "postcss-preset-env": "^10.1.1",
     "typescript": "~5.7.2",

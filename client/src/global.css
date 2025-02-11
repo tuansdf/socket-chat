@@ -47,9 +47,15 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  text-align: center;
 
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+  }
+
+  button {
+    width: 100%;
+    margin-top: 0.5rem;
   }
 }
 /* INDEX PAGE END */
@@ -63,7 +69,33 @@ body {
 }
 
 .chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding-inline: 1rem;
+}
+
+.dialog {
+  font-size: 1.125rem;
+
+  article {
+    padding: 1.5rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .buttons {
+    display: flex;
+    justify-content: flex-end;
+  }
+  button {
+    margin: 0;
+    margin-top: 0.75rem;
+  }
+  .qr-label {
+    margin-bottom: 0.5rem;
+  }
 }
 
 .chat-messages {
@@ -107,11 +139,11 @@ body {
 
 .chat-link {
   word-wrap: break-word;
-  word-break: break-word;
+  word-break: break-all;
 
   a {
     word-wrap: break-word;
-    word-break: break-word;
+    word-break: break-all;
   }
 }
 

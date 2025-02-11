@@ -1,8 +1,8 @@
 import { A, useLocation, useNavigate, useParams } from "@solidjs/router";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { QR } from "../components/qr.tsx";
 import {
   EVENT_SEND_MESSAGE,
-  EVENT_UPDATE_NAME,
   EVENT_USER_CONNECTED,
   EVENT_USER_DISCONNECTED,
   FRIENDLY_ID_LENGTH,
@@ -25,6 +25,7 @@ type Metadata = {
   m?: string; // message
   n?: string; // name
   s?: string; // sessionId
+  t?: number; // timestamp
 };
 
 const toShortId = (id: string | undefined) => {
@@ -36,18 +37,19 @@ const encryptMetadata = async (metadata: Metadata, password: string) => {
 };
 
 export default function ChatPage() {
-  const [names, setNames] = createSignal<Record<string, string>>({});
-  const [name, setName] = createSignal<string>("");
   const [message, setMessage] = createSignal<string>("");
-  const [messages, setMessages] = createSignal<{ userId?: string; content: string }[]>([]);
+  const [messages, setMessages] = createSignal<{ userId?: string; content: string; timestamp: Date }[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ roomId: string }>();
 
+  const [isDialogOpen, setIsDialogOpen] = createSignal<boolean>(true);
+  const openDialog = () => setIsDialogOpen(true);
+  const closeDialog = () => setIsDialogOpen(false);
+
   let messagesEl!: HTMLDivElement;
   let inputEl!: HTMLTextAreaElement;
   let formEl!: HTMLFormElement;
-  let nameInputEl!: HTMLInputElement;
 
   let password = window.location.hash.substring(1);
   if (!password || !PASSWORD_REGEX.test(password)) {
@@ -80,10 +82,16 @@ export default function ChatPage() {
       let content: string = "";
       const serverMetadata = JSON.parse(decoder.decode(msg.slice(-SERVER_METADATA_BYTES_LENGTH)).trim()) as Metadata;
       if (serverMetadata.e === EVENT_USER_CONNECTED) {
-        return addMessage(`User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) connected`);
+        return addMessage(
+          `User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) connected`,
+          new Date(serverMetadata.t!),
+        );
       }
       if (serverMetadata.e === EVENT_USER_DISCONNECTED) {
-        return addMessage(`User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) disconnected`);
+        return addMessage(
+          `User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) disconnected`,
+          new Date(serverMetadata.t!),
+        );
       }
 
       const metadataPm = decryptToString(
@@ -101,15 +109,8 @@ export default function ChatPage() {
       metadata = JSON.parse(promises[0]) as Metadata;
       content = promises[1];
 
-      if (metadata.e === EVENT_UPDATE_NAME) {
-        const userId = serverMetadata.u;
-        const name = metadata.n;
-        if (!userId || !name) return;
-        setNames((prev) => ({ ...prev, [userId]: name }));
-        addMessage(`User ${toShortId(userId)} updated their name to: ${name}`);
-      }
       if (metadata.e === EVENT_SEND_MESSAGE) {
-        return addMessage(content, serverMetadata.u);
+        return addMessage(content, new Date(serverMetadata.t!), serverMetadata.u);
       }
     } catch (e) {
     } finally {
@@ -117,13 +118,13 @@ export default function ChatPage() {
     }
   };
 
-  const addMessage = (msg: string, userId?: string) => {
-    setMessages((prev) => [...prev, { userId, content: msg }]);
+  const addMessage = (msg: string, timestamp: Date, userId?: string) => {
+    setMessages((prev) => [...prev, { userId, content: msg, timestamp }]);
   };
 
   const handleSubmit = async () => {
     try {
-      addMessage(message(), userId);
+      addMessage(message(), new Date(), userId);
       const metadata: Metadata = { e: EVENT_SEND_MESSAGE };
       const contentPm = encryptString(message(), password, true);
       const metadataPm = encryptMetadata(metadata, password);
@@ -137,17 +138,6 @@ export default function ChatPage() {
       setMessage("");
       inputEl.value = "";
     }
-  };
-
-  const handleNameSubmit = async () => {
-    const targetName = name().trim();
-    if (!targetName) return;
-    const metadata: Metadata = { e: EVENT_UPDATE_NAME, n: targetName };
-    const encryptedMetadata = await encryptMetadata(metadata, password);
-    socket.send(encryptedMetadata);
-    setNames((prev) => ({ ...prev, [userId]: targetName }));
-    addMessage(`User ${toShortId(userId)} updated their name to: ${targetName}`);
-    scrollToBottom();
   };
 
   const scrollToBottom = () => {
@@ -166,79 +156,86 @@ export default function ChatPage() {
   };
   onMount(() => {
     inputEl.addEventListener("keydown", handleInputKeyPress);
-    const name = toShortId(userId);
-    nameInputEl.value = name;
-    setName(name);
   });
   onCleanup(() => {
     inputEl.removeEventListener("keydown", handleInputKeyPress);
   });
 
   return (
-    <main class="chat-container">
-      <A href="/" class="chat-header">
-        <h2>Messages</h2>
-      </A>
-      <div class="chat-messages" ref={messagesEl}>
-        <For each={messages()}>
-          {(message) => (
-            <div
-              class="chat-message"
-              style={{
-                "align-items": !message.userId ? "center" : userId === message.userId ? "flex-end" : "flex-start",
-              }}
-            >
-              <Show when={message.userId}>
-                <div class="chat-user">{names()[message.userId!] || toShortId(message.userId)}</div>
-              </Show>
-              <div class={message.userId ? "chat-message-bubble" : undefined}>{message.content}</div>
-            </div>
-          )}
-        </For>
-      </div>
+    <>
+      <main class="chat-container">
+        <div class="chat-header">
+          <A href="/">
+            <h2>Messages</h2>
+          </A>
 
-      <form
-        ref={formEl}
-        on:submit={async (e) => {
-          e.preventDefault();
-          await handleSubmit();
-        }}
-        class="chat-form"
-      >
-        <textarea
-          ref={inputEl}
-          rows={2}
-          class="chat-input"
-          required
-          maxLength={5_000_000}
-          value={message()}
-          onInput={(e) => {
-            setMessage(e.target.value || "");
-          }}
-        />
-        <button type="submit" class="chat-submit">
-          Submit
-        </button>
-
-        <div class="chat-link">
-          <span>
-            Invite other using this <a href={inviteLink}>link</a>
-          </span>
+          <button class="outline contrast" onClick={openDialog}>
+            Invite
+          </button>
         </div>
-      </form>
+        <div class="chat-messages" ref={messagesEl}>
+          <For each={messages()}>
+            {(message) => (
+              <div
+                class="chat-message"
+                style={{
+                  "align-items": !message.userId ? "center" : userId === message.userId ? "flex-end" : "flex-start",
+                }}
+              >
+                <Show when={message.userId}>
+                  <div class="chat-user">
+                    <Show when={message.timestamp}>
+                      <span>{message.timestamp.toLocaleString()} - </span>
+                    </Show>
+                    <span>{toShortId(message.userId)}</span>
+                  </div>
+                </Show>
+                <div class={message.userId ? "chat-message-bubble" : undefined}>{message.content}</div>
+              </div>
+            )}
+          </For>
+        </div>
 
-      <div class="chat-sidebar">
-        <h2>Update name</h2>
         <form
-          onSubmit={async (e) => {
+          ref={formEl}
+          on:submit={async (e) => {
             e.preventDefault();
-            await handleNameSubmit();
+            await handleSubmit();
           }}
+          class="chat-form"
         >
-          <input required onInput={(e) => setName(e.target.value)} ref={nameInputEl} />
-          <button>Submit</button>
+          <textarea
+            ref={inputEl}
+            rows={2}
+            class="chat-input"
+            required
+            maxLength={5_000_000}
+            value={message()}
+            onInput={(e) => {
+              setMessage(e.target.value || "");
+            }}
+          />
+          <button type="submit" class="chat-submit">
+            Submit
+          </button>
         </form>
-      </div>
-    </main>
+      </main>
+
+      <dialog open={isDialogOpen()} class="dialog">
+        <article>
+          <h2>Invite others</h2>
+          <p class="chat-link">
+            Share this link: <a href={inviteLink}>{inviteLink}</a>
+          </p>
+          <p class="qr-label">Or scan this QR:</p>
+          <QR content={inviteLink} />
+          <div class="buttons">
+            <button type="button" onClick={closeDialog}>
+              OK
+            </button>
+          </div>
+        </article>
+      </dialog>
+    </>
   );
 }
