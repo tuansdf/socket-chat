@@ -3,11 +3,13 @@ import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { appendUint8Array, decryptToString, encryptString, generateId, generatePassword } from "../utils/crypto.js";
 import { getOrSetCookie, openWebSocket, setCookie } from "../utils/utils.js";
 
+const decoder = new TextDecoder();
+
 const ROOM_ID_KEY = "roomId";
 const USER_ID_KEY = "userId";
-const HANDSHAKE_KEY = "handshake";
 const FRIENDLY_USER_ID_LENGTH = 8;
 
+const SERVER_METADATA_BYTES_LENGTH = 120;
 const METADATA_STRING_LENGTH = 80;
 const METADATA_BYTES_LENGTH = 120;
 
@@ -20,8 +22,8 @@ type Metadata = {
   u?: string; // userId
   e?: number; // event
   m?: string; // message
+  n?: string; // name
   s?: string; // sessionId
-  x?: string; // handshake
 };
 
 const encryptMetadata = async (metadata: Metadata, password: string) => {
@@ -29,7 +31,6 @@ const encryptMetadata = async (metadata: Metadata, password: string) => {
 };
 
 export default function ChatPage() {
-  // WARN: the mechanism does not verify whether the username update event is coming from the same person
   const [names, setNames] = createSignal<Record<string, string>>({});
   const [name, setName] = createSignal<string>("");
   const [message, setMessage] = createSignal<string>("");
@@ -50,14 +51,11 @@ export default function ChatPage() {
   }
   const roomId = params.roomId;
   setCookie(ROOM_ID_KEY, roomId);
-  const handshake = getOrSetCookie(HANDSHAKE_KEY, generateId);
   const userId = getOrSetCookie(USER_ID_KEY, generateId);
   const socket = openWebSocket("ws://localhost:3000", {
     onOpen: () => handleSocketOpen(),
     onMessage: async (e) => {
-      if (typeof e.data === "string") {
-        await handleSocketMessage(e.data);
-      } else if (e.data instanceof Blob) {
+      if (e.data instanceof Blob) {
         const temp = new Uint8Array(await e.data.arrayBuffer());
         await handleSocketMessage(temp);
       }
@@ -68,49 +66,51 @@ export default function ChatPage() {
     console.log("WebSocket Connected");
   };
 
-  const handleSocketMessage = async (msg: string | Uint8Array) => {
+  const handleSocketMessage = async (msg: Uint8Array) => {
     try {
       let metadata: Metadata = {};
       let content: string = "";
-      if (typeof msg === "string") {
-        try {
-          metadata = JSON.parse(msg);
-          if (metadata.x !== handshake) return;
-        } catch (e) {
-          return;
-        }
-      } else {
-        const metadataPm = decryptToString(msg.slice(-METADATA_BYTES_LENGTH), password, false);
-        const contentPm = decryptToString(
-          msg.slice(0, msg.length > METADATA_BYTES_LENGTH ? msg.length - METADATA_BYTES_LENGTH : 0),
-          password,
-          true,
+      const serverMetadata = JSON.parse(decoder.decode(msg.slice(-SERVER_METADATA_BYTES_LENGTH)).trim()) as Metadata;
+      if (serverMetadata.e === EVENT_USER_CONNECTED) {
+        return addMessage(
+          `User ${serverMetadata.u?.substring(0, FRIENDLY_USER_ID_LENGTH)} (${serverMetadata.s?.substring(0, FRIENDLY_USER_ID_LENGTH)}) connected`,
         );
-        const promises = await Promise.all([metadataPm, contentPm]);
-        if (!promises[0]) return;
-        metadata = JSON.parse(promises[0]) as Metadata;
-        content = promises[1];
+      }
+      if (serverMetadata.e === EVENT_USER_DISCONNECTED) {
+        return addMessage(
+          `User ${serverMetadata.u?.substring(0, FRIENDLY_USER_ID_LENGTH)} (${serverMetadata.s?.substring(0, FRIENDLY_USER_ID_LENGTH)}) disconnected`,
+        );
+      }
 
-        if (metadata.e === EVENT_UPDATE_NAME) {
-          const userId = metadata.u;
-          const username = metadata.m;
-          if (!userId || !username) return;
-          setNames((prev) => ({ ...prev, [userId]: username }));
-          addMessage(`User ${userId.substring(0, FRIENDLY_USER_ID_LENGTH)} updated their name to: ${username}`);
-        }
-        if (metadata.e === EVENT_SEND_MESSAGE) {
-          return addMessage(content, metadata.u);
-        }
+      const metadataPm = decryptToString(
+        msg.slice(-SERVER_METADATA_BYTES_LENGTH - METADATA_BYTES_LENGTH, -SERVER_METADATA_BYTES_LENGTH),
+        password,
+        false,
+      );
+      const contentPm = decryptToString(
+        msg.slice(
+          0,
+          msg.length > METADATA_BYTES_LENGTH + SERVER_METADATA_BYTES_LENGTH
+            ? msg.length - SERVER_METADATA_BYTES_LENGTH - METADATA_BYTES_LENGTH
+            : 0,
+        ),
+        password,
+        true,
+      );
+      const promises = await Promise.all([metadataPm, contentPm]);
+      if (!promises[0]) return;
+      metadata = JSON.parse(promises[0]) as Metadata;
+      content = promises[1];
+
+      if (metadata.e === EVENT_UPDATE_NAME) {
+        const userId = serverMetadata.u;
+        const name = metadata.n;
+        if (!userId || !name) return;
+        setNames((prev) => ({ ...prev, [userId]: name }));
+        addMessage(`User ${userId.substring(0, FRIENDLY_USER_ID_LENGTH)} updated their name to: ${name}`);
       }
-      if (metadata.e === EVENT_USER_CONNECTED) {
-        return addMessage(
-          `User ${metadata.u?.substring(0, FRIENDLY_USER_ID_LENGTH)} (${metadata.s?.substring(0, FRIENDLY_USER_ID_LENGTH)}) connected`,
-        );
-      }
-      if (metadata.e === EVENT_USER_DISCONNECTED) {
-        return addMessage(
-          `User ${metadata.u?.substring(0, FRIENDLY_USER_ID_LENGTH)} (${metadata.s?.substring(0, FRIENDLY_USER_ID_LENGTH)}) disconnected`,
-        );
+      if (metadata.e === EVENT_SEND_MESSAGE) {
+        return addMessage(content, serverMetadata.u);
       }
     } catch (e) {
     } finally {
@@ -143,7 +143,7 @@ export default function ChatPage() {
   const handleNameSubmit = async () => {
     const targetName = name().trim();
     if (!targetName) return;
-    const metadata: Metadata = { u: userId, e: EVENT_UPDATE_NAME, m: targetName };
+    const metadata: Metadata = { e: EVENT_UPDATE_NAME, n: targetName };
     const encryptedMetadata = await encryptMetadata(metadata, password);
     socket.send(encryptedMetadata);
     setNames((prev) => ({ ...prev, [userId]: targetName }));
