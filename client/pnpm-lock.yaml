@@ -17,9 +17,6 @@ importers:
       '@solidjs/router':
         specifier: ^0.15.3
         version: 0.15.3(solid-js@1.9.4)
-      cookie:
-        specifier: ^1.0.2
-        version: 1.0.2
       pako:
         specifier: ^2.1.0
         version: 2.1.0
@@ -739,10 +736,6 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
-
-  cookie@1.0.2:
-    resolution: {integrity: sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==}
-    engines: {node: '>=18'}
 
   css-blank-pseudo@7.0.1:
     resolution: {integrity: sha512-jf+twWGDf6LDoXDUode+nc7ZlrqfaNphrBIBrcmeP3D8yw1uPaix1gCC8LUQUGQ6CycuK2opkbFFWFuq/a94ag==}
@@ -1844,8 +1837,6 @@ snapshots:
   color-name@1.1.4: {}
 
   convert-source-map@2.0.0: {}
-
-  cookie@1.0.2: {}
 
   css-blank-pseudo@7.0.1(postcss@8.5.1):
     dependencies:

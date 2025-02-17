@@ -14,9 +14,9 @@ import {
   SERVER_METADATA_BYTES_LENGTH,
   USER_ID_KEY,
 } from "../constants/common.constant.ts";
-import { Env } from "../constants/env.ts";
+import { ENV_WEBSOCKET_BASE_URL } from "../constants/env.ts";
 import { appendUint8Array, decryptToString, encryptString, generateId, generatePassword } from "../utils/crypto.js";
-import { getOrSetCookie, openWebSocket, setCookie } from "../utils/utils.js";
+import { getOrSetStorage, openWebSocket, setStorage } from "../utils/utils.js";
 
 const decoder = new TextDecoder();
 
@@ -58,13 +58,13 @@ export default function ChatPage() {
     navigate(`${location.pathname}#${password}`, { replace: true });
   }
   const roomId = params.roomId;
-  setCookie(ROOM_ID_KEY, roomId);
-  const userId = getOrSetCookie(USER_ID_KEY, generateId);
+  setStorage(ROOM_ID_KEY, roomId);
+  const userId = getOrSetStorage(USER_ID_KEY, generateId);
   if (!ID_REGEX.test(roomId) || !ID_REGEX.test(userId)) {
     navigate("/", { replace: true });
     return <></>;
   }
-  const socket = openWebSocket(Env.WEBSOCKET_BASE_URL, {
+  const socket = openWebSocket(`${ENV_WEBSOCKET_BASE_URL}?${ROOM_ID_KEY}=${roomId}&${USER_ID_KEY}=${userId}`, {
     onOpen: () => handleSocketOpen(),
     onMessage: async (e) => {
       if (e.data instanceof Blob) {

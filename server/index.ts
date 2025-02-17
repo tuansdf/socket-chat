@@ -1,7 +1,7 @@
-import * as cookie from "cookie";
-
 const EVENT_USER_CONNECTED = 2;
 const EVENT_USER_DISCONNECTED = 3;
+export const ROOM_ID_KEY = "roomId";
+export const USER_ID_KEY = "userId";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -58,17 +58,21 @@ const createMetadata = (userId: string, sessionId: string, event?: number, messa
 const server = Bun.serve({
   port: PORT,
   fetch(req, server) {
-    const cookies = cookie.parse(req.headers.get("Cookie") || "");
-    const roomId = cookies.roomId;
-    const userId = cookies.userId;
-    if (!roomId || !userId) {
+    try {
+      const url = new URL(req.url);
+      const roomId = url.searchParams.get(ROOM_ID_KEY);
+      const userId = url.searchParams.get(USER_ID_KEY);
+      if (!roomId || !userId) {
+        return new Response("Something Went Wrong", { status: 500 });
+      }
+      const sessionId = crypto.randomUUID();
+      if (server.upgrade(req, { data: { roomId, userId, sessionId } })) {
+        return;
+      }
+      return new Response("Something Went Wrong", { status: 500 });
+    } catch (e) {
       return new Response("Something Went Wrong", { status: 500 });
     }
-    const sessionId = crypto.randomUUID();
-    if (server.upgrade(req, { data: { roomId, userId, sessionId } })) {
-      return;
-    }
-    return new Response("Something Went Wrong", { status: 500 });
   },
   websocket: {
     idleTimeout: 300,

@@ -1,23 +1,16 @@
-import * as cookie from "cookie";
-import { Env } from "../constants/env.ts";
-
-export const setCookie = (key: string, value: string) => {
-  document.cookie = cookie.serialize(key, value, {
-    sameSite: true,
-    secure: true,
-    domain: Env.WEBSOCKET_DOMAIN,
-  });
+export const setStorage = (key: string, value: string) => {
+  sessionStorage.setItem(key, value);
 };
 
-export const getCookie = (key: string): string | undefined => {
-  return cookie.parse(document.cookie)[key];
+export const getStorage = (key: string): string | undefined | null => {
+  return sessionStorage.getItem(key);
 };
 
-export const getOrSetCookie = (key: string, valueFn: () => string): string => {
-  const result = getCookie(key);
+export const getOrSetStorage = (key: string, valueFn: () => string): string => {
+  const result = getStorage(key);
   if (result) return result;
   const value = valueFn();
-  setCookie(key, value);
+  setStorage(key, value);
   return value;
 };
 

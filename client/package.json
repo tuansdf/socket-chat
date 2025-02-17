@@ -12,7 +12,6 @@
     "@noble/ciphers": "^1.2.1",
     "@picocss/pico": "^2.0.6",
     "@solidjs/router": "^0.15.3",
-    "cookie": "^1.0.2",
     "pako": "^2.1.0",
     "qrcode": "^1.5.4",
     "solid-js": "^1.9.4"
