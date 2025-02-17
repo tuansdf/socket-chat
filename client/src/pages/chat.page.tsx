@@ -60,7 +60,8 @@ export default function ChatPage() {
   setCookie(ROOM_ID_KEY, roomId);
   const userId = getOrSetCookie(USER_ID_KEY, generateId);
   if (!ID_REGEX.test(roomId) || !ID_REGEX.test(userId)) {
-    return navigate("/", { replace: true });
+    navigate("/", { replace: true });
+    return <></>;
   }
   const socket = openWebSocket("ws://localhost:3000", {
     onOpen: () => handleSocketOpen(),
