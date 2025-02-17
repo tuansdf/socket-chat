@@ -14,6 +14,7 @@ import {
   SERVER_METADATA_BYTES_LENGTH,
   USER_ID_KEY,
 } from "../constants/common.constant.ts";
+import { Env } from "../constants/env.ts";
 import { appendUint8Array, decryptToString, encryptString, generateId, generatePassword } from "../utils/crypto.js";
 import { getOrSetCookie, openWebSocket, setCookie } from "../utils/utils.js";
 
@@ -63,7 +64,7 @@ export default function ChatPage() {
     navigate("/", { replace: true });
     return <></>;
   }
-  const socket = openWebSocket("ws://localhost:3000", {
+  const socket = openWebSocket(Env.WEBSOCKET_BASE_URL, {
     onOpen: () => handleSocketOpen(),
     onMessage: async (e) => {
       if (e.data instanceof Blob) {

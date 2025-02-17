@@ -1,9 +1,11 @@
 import * as cookie from "cookie";
+import { Env } from "../constants/env.ts";
 
 export const setCookie = (key: string, value: string) => {
   document.cookie = cookie.serialize(key, value, {
     sameSite: true,
     secure: true,
+    domain: Env.WEBSOCKET_DOMAIN,
   });
 };
 
