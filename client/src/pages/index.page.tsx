@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { generateId } from "../utils/crypto.js";
+import { generateId } from "../utils/crypto.util.ts";
 
 export default function IndexPage() {
   const navigate = useNavigate();

@@ -3,35 +3,17 @@ import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { QR } from "../components/qr.tsx";
 import {
   EVENT_SEND_MESSAGE,
-  EVENT_USER_CONNECTED,
-  EVENT_USER_DISCONNECTED,
-  FRIENDLY_ID_LENGTH,
   ID_REGEX,
   METADATA_STRING_LENGTH,
-  NON_CONTENT_BYTES_LENGTH,
   PASSWORD_REGEX,
   ROOM_ID_KEY,
-  SERVER_METADATA_BYTES_LENGTH,
   USER_ID_KEY,
 } from "../constants/common.constant.ts";
 import { ENV_WEBSOCKET_BASE_URL } from "../constants/env.ts";
-import { appendUint8Array, decryptToString, encryptString, generateId, generatePassword } from "../utils/crypto.js";
-import { getOrSetStorage, openWebSocket, setStorage } from "../utils/utils.js";
-
-const decoder = new TextDecoder();
-
-type Metadata = {
-  u?: string; // userId
-  e?: number; // event
-  m?: string; // message
-  n?: string; // name
-  s?: string; // sessionId
-  t?: number; // timestamp
-};
-
-const toShortId = (id: string | undefined) => {
-  return id?.substring(0, FRIENDLY_ID_LENGTH) || "";
-};
+import { ChatEvent, Metadata } from "../types/common.type.ts";
+import { getOrSetStorage, setStorage, toShortId } from "../utils/common.util.ts";
+import { appendUint8Array, encryptString, generateId, generatePassword } from "../utils/crypto.util.ts";
+import { openChatSocket } from "../utils/socket.util.ts";
 
 const encryptMetadata = async (metadata: Metadata, password: string) => {
   return encryptString(JSON.stringify(metadata).padEnd(METADATA_STRING_LENGTH, " "), password, false);
@@ -64,61 +46,30 @@ export default function ChatPage() {
     navigate("/", { replace: true });
     return <></>;
   }
-  const socket = openWebSocket(`${ENV_WEBSOCKET_BASE_URL}?${ROOM_ID_KEY}=${roomId}&${USER_ID_KEY}=${userId}`, {
-    onOpen: () => handleSocketOpen(),
-    onMessage: async (e) => {
-      if (e.data instanceof Blob) {
-        const temp = new Uint8Array(await e.data.arrayBuffer());
-        await handleSocketMessage(temp);
-      }
-    },
-  });
 
-  const handleSocketOpen = () => {
-    console.log("WebSocket Connected");
-  };
-
-  const handleSocketMessage = async (msg: Uint8Array) => {
+  const handleSocketMessage = async (e: ChatEvent) => {
     try {
-      let metadata: Metadata = {};
-      let content: string = "";
-      const serverMetadata = JSON.parse(decoder.decode(msg.slice(-SERVER_METADATA_BYTES_LENGTH)).trim()) as Metadata;
-      if (serverMetadata.e === EVENT_USER_CONNECTED) {
-        return addMessage(
-          `User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) connected`,
-          new Date(serverMetadata.t!),
-        );
-      }
-      if (serverMetadata.e === EVENT_USER_DISCONNECTED) {
-        return addMessage(
-          `User ${toShortId(serverMetadata.u)} (${toShortId(serverMetadata.s)}) disconnected`,
-          new Date(serverMetadata.t!),
-        );
-      }
-
-      const metadataPm = decryptToString(
-        msg.slice(-NON_CONTENT_BYTES_LENGTH, -SERVER_METADATA_BYTES_LENGTH),
-        password,
-        false,
-      );
-      const contentPm = decryptToString(
-        msg.slice(0, msg.length > NON_CONTENT_BYTES_LENGTH ? msg.length - NON_CONTENT_BYTES_LENGTH : 0),
-        password,
-        true,
-      );
-      const promises = await Promise.all([metadataPm, contentPm]);
-      if (!promises[0]) return;
-      metadata = JSON.parse(promises[0]) as Metadata;
-      content = promises[1];
-
-      if (metadata.e === EVENT_SEND_MESSAGE) {
-        return addMessage(content, new Date(serverMetadata.t!), serverMetadata.u);
+      if (e.content && e.server?.t) {
+        addMessage(e.content, new Date(e.server.t), e.client?.e === EVENT_SEND_MESSAGE ? e.server?.u : undefined);
       }
     } catch (e) {
     } finally {
       scrollToBottom();
     }
   };
+
+  const handleSocketOpen = () => {
+    console.log("WebSocket Connected");
+  };
+
+  const socket = openChatSocket(
+    `${ENV_WEBSOCKET_BASE_URL}?${ROOM_ID_KEY}=${roomId}&${USER_ID_KEY}=${userId}`,
+    password,
+    {
+      onOpen: handleSocketOpen,
+      onMessage: handleSocketMessage,
+    },
+  );
 
   const addMessage = (msg: string, timestamp: Date, userId?: string) => {
     setMessages((prev) => [...prev, { userId, content: msg, timestamp }]);
