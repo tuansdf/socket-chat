@@ -1,5 +1,6 @@
 import { cn } from "@/utils/classnames.ts";
 import { A, useLocation, useNavigate, useParams } from "@solidjs/router";
+import dayjs from "dayjs";
 import { createSignal, createUniqueId, For, onCleanup, onMount, Show } from "solid-js";
 import { QR } from "../components/qr.tsx";
 import {
@@ -12,10 +13,11 @@ import {
 } from "../constants/common.constant.ts";
 import { ENV_WEBSOCKET_BASE_URL } from "../constants/env.ts";
 import { ChatEvent, Metadata } from "../types/common.type.ts";
-import { getOrSetStorage, setStorage, toShortId } from "../utils/common.util.ts";
+import { getOrSetStorage, toShortId } from "../utils/common.util.ts";
 import { appendUint8Array, encryptString, generateId, generatePassword } from "../utils/crypto.util.ts";
 import { openChatSocket } from "../utils/socket.util.ts";
 
+const FORMAT_DATE = "DD/MM/YYYY HH:mm:ss";
 const MAX_CONTENT_LENGTH = 5_000_000;
 
 const encryptMetadata = async (metadata: Metadata, password: string) => {
@@ -41,7 +43,6 @@ export default function ChatPage() {
     navigate(`${location.pathname}#${password}`, { replace: true });
   }
   const roomId = params.roomId;
-  setStorage(ROOM_ID_KEY, roomId);
   const userId = getOrSetStorage(USER_ID_KEY, generateId);
   if (!ID_REGEX.test(roomId) || !ID_REGEX.test(userId)) {
     navigate("/", { replace: true });
@@ -120,7 +121,7 @@ export default function ChatPage() {
       <main class="d-flex flex-column h-100 py-3">
         <div class="d-flex justify-content-between align-items-center px-3">
           <A href="/">
-            <h1 class="fs-2 fw-bold">Messages</h1>
+            <h1 class="fs-3 fw-bold">Messages</h1>
           </A>
 
           <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target={`#${modalId}`}>
@@ -142,10 +143,12 @@ export default function ChatPage() {
               >
                 <Show when={message.userId}>
                   <div class="mb-2">
-                    <Show when={message.timestamp}>
-                      <span>{message.timestamp.toLocaleString()} - </span>
+                    <Show when={userId !== message.userId}>
+                      <span>{toShortId(message.userId)} - </span>
                     </Show>
-                    <span>{toShortId(message.userId)}</span>
+                    <Show when={message.timestamp}>
+                      <span>{dayjs(message.timestamp).format(FORMAT_DATE)}</span>
+                    </Show>
                   </div>
                 </Show>
                 <div class={message.userId ? "chat-message-bubble text-break" : undefined}>{message.content}</div>
