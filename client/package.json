@@ -10,8 +10,9 @@
   },
   "dependencies": {
     "@noble/ciphers": "^1.2.1",
-    "@picocss/pico": "^2.0.6",
     "@solidjs/router": "^0.15.3",
+    "bootstrap": "^5.3.3",
+    "clsx": "^2.1.1",
     "pako": "^2.1.0",
     "qrcode": "^1.5.4",
     "solid-js": "^1.9.4"
@@ -21,9 +22,11 @@
     "@types/qrcode": "^1.5.5",
     "postcss": "^8.4.49",
     "postcss-preset-env": "^10.1.1",
+    "sass": "1.77.6",
     "typescript": "~5.7.2",
     "vite": "^6.1.0",
-    "vite-plugin-solid": "^2.11.0"
+    "vite-plugin-solid": "^2.11.0",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "browserslist": [
     "since 2020"

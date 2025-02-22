@@ -12,7 +12,7 @@ export const QR = (props: Props) => {
   createEffect(async () => {
     await QRCode.toCanvas(document.getElementById(id), props.content, {
       width: 240,
-      errorCorrectionLevel: "H",
+      errorCorrectionLevel: "Q",
       margin: 2,
     });
   });

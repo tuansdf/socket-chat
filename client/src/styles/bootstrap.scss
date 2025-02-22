@@ -1,0 +1,5 @@
+@use "bootstrap/scss/bootstrap" with (
+  $font-size-base: 0.875rem,
+  $focus-ring-box-shadow: none,
+  $spacer: 0.75rem
+);

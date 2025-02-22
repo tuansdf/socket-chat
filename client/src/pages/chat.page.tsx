@@ -1,5 +1,6 @@
+import { cn } from "@/utils/classnames.ts";
 import { A, useLocation, useNavigate, useParams } from "@solidjs/router";
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, createUniqueId, For, onCleanup, onMount, Show } from "solid-js";
 import { QR } from "../components/qr.tsx";
 import {
   EVENT_SEND_MESSAGE,
@@ -15,6 +16,8 @@ import { getOrSetStorage, setStorage, toShortId } from "../utils/common.util.ts"
 import { appendUint8Array, encryptString, generateId, generatePassword } from "../utils/crypto.util.ts";
 import { openChatSocket } from "../utils/socket.util.ts";
 
+const MAX_CONTENT_LENGTH = 5_000_000;
+
 const encryptMetadata = async (metadata: Metadata, password: string) => {
   return encryptString(JSON.stringify(metadata).padEnd(METADATA_STRING_LENGTH, " "), password, false);
 };
@@ -26,9 +29,7 @@ export default function ChatPage() {
   const location = useLocation();
   const params = useParams<{ roomId: string }>();
 
-  const [isDialogOpen, setIsDialogOpen] = createSignal<boolean>(true);
-  const openDialog = () => setIsDialogOpen(true);
-  const closeDialog = () => setIsDialogOpen(false);
+  const modalId = createUniqueId();
 
   let messagesEl!: HTMLDivElement;
   let inputEl!: HTMLTextAreaElement;
@@ -116,34 +117,38 @@ export default function ChatPage() {
 
   return (
     <>
-      <main class="chat-container">
-        <div class="chat-header">
+      <main class="d-flex flex-column h-100 py-3">
+        <div class="d-flex justify-content-between align-items-center px-3">
           <A href="/">
-            <h2>Messages</h2>
+            <h1 class="fs-2 fw-bold">Messages</h1>
           </A>
 
-          <button class="outline contrast" onClick={openDialog}>
+          <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target={`#${modalId}`}>
             Invite
           </button>
         </div>
-        <div class="chat-messages" ref={messagesEl}>
+        <div class="flex-grow-1 overflow-y-auto overflow-x-hidden px-3" ref={messagesEl}>
           <For each={messages()}>
             {(message) => (
               <div
-                class="chat-message"
-                style={{
-                  "align-items": !message.userId ? "center" : userId === message.userId ? "flex-end" : "flex-start",
-                }}
+                class={cn(
+                  "d-flex flex-column mt-2 text-secondary-emphasis",
+                  !message.userId
+                    ? "align-items-center"
+                    : userId === message.userId
+                      ? "align-items-end"
+                      : "align-items-start",
+                )}
               >
                 <Show when={message.userId}>
-                  <div class="chat-user">
+                  <div class="mb-2">
                     <Show when={message.timestamp}>
                       <span>{message.timestamp.toLocaleString()} - </span>
                     </Show>
                     <span>{toShortId(message.userId)}</span>
                   </div>
                 </Show>
-                <div class={message.userId ? "chat-message-bubble" : undefined}>{message.content}</div>
+                <div class={message.userId ? "chat-message-bubble text-break" : undefined}>{message.content}</div>
               </div>
             )}
           </For>
@@ -155,40 +160,50 @@ export default function ChatPage() {
             e.preventDefault();
             await handleSubmit();
           }}
-          class="chat-form"
+          class="px-3"
         >
           <textarea
             ref={inputEl}
             rows={2}
-            class="chat-input"
+            class="form-control mb-3 mt-3"
             required
-            maxLength={5_000_000}
+            maxLength={MAX_CONTENT_LENGTH}
             value={message()}
             onInput={(e) => {
               setMessage(e.target.value || "");
             }}
           />
-          <button type="submit" class="chat-submit">
+          <button type="submit" class="btn btn-primary w-100">
             Submit
           </button>
         </form>
       </main>
 
-      <dialog open={isDialogOpen()} class="dialog">
-        <article>
-          <h2>Invite others</h2>
-          <p class="chat-link">
-            Share this link: <a href={inviteLink}>{inviteLink}</a>
-          </p>
-          <p class="qr-label">Or scan this QR:</p>
-          <QR content={inviteLink} />
-          <div class="buttons">
-            <button type="button" onClick={closeDialog}>
-              OK
-            </button>
+      <div class="modal fade" id={modalId} tabIndex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5">Invite others</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+              <p class="text-break">
+                <span class="d-block mb-1">Share this link:</span>
+                <a href={inviteLink}>{inviteLink}</a>
+              </p>
+              <p class="mb-2">Or scan this QR:</p>
+              <QR content={inviteLink} />
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                Close
+              </button>
+            </div>
           </div>
-        </article>
-      </dialog>
+        </div>
+      </div>
     </>
   );
 }
