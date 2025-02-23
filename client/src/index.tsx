@@ -1,8 +1,9 @@
 /* @refresh reload */
+import "@/styles";
+import "@/libs/bootstrap.ts";
+
+import App from "@/app.tsx";
 import { render } from "solid-js/web";
-import App from "./app.tsx";
-import "./styles";
-import "bootstrap/dist/js/bootstrap.js";
 
 const root = document.getElementById("root");
 
