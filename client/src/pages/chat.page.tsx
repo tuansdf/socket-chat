@@ -25,6 +25,7 @@ const encryptMetadata = async (metadata: Metadata, password: string) => {
 };
 
 export default function ChatPage() {
+  const [isConnected, setIsConnected] = createSignal<boolean>(false);
   const [message, setMessage] = createSignal<string>("");
   const [messages, setMessages] = createSignal<{ userId?: string; content: string; timestamp: Date }[]>([]);
   const navigate = useNavigate();
@@ -62,16 +63,23 @@ export default function ChatPage() {
 
   const handleSocketOpen = () => {
     console.log("WebSocket Connected");
+    setIsConnected(true);
   };
 
-  const socket = openChatSocket(
-    `${ENV_WEBSOCKET_BASE_URL}?${ROOM_ID_KEY}=${roomId}&${USER_ID_KEY}=${userId}`,
-    password,
-    {
+  const handleSocketClose = () => {
+    console.log("WebSocket Disconnected");
+    setIsConnected(false);
+  };
+
+  const openSocket = () => {
+    return openChatSocket(`${ENV_WEBSOCKET_BASE_URL}?${ROOM_ID_KEY}=${roomId}&${USER_ID_KEY}=${userId}`, password, {
       onOpen: handleSocketOpen,
+      onClose: handleSocketClose,
       onMessage: handleSocketMessage,
-    },
-  );
+    });
+  };
+
+  let socket = openSocket();
 
   const addMessage = (msg: string, timestamp: Date, userId?: string) => {
     setMessages((prev) => [...prev, { userId, content: msg, timestamp }]);
@@ -124,9 +132,19 @@ export default function ChatPage() {
             <h1 class="fs-3 fw-bold">Messages</h1>
           </A>
 
-          <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target={`#${modalId}`}>
-            Invite
-          </button>
+          <div class="d-flex align-items-center gap-2">
+            <Show when={!isConnected()}>
+              <div>You are disconnected</div>
+              <button class="btn btn-outline-light" onClick={() => (socket = openSocket())}>
+                Reconnect
+              </button>
+            </Show>
+            <Show when={isConnected()}>
+              <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target={`#${modalId}`}>
+                Invite
+              </button>
+            </Show>
+          </div>
         </div>
         <div class="flex-grow-1 overflow-y-auto overflow-x-hidden px-3" ref={messagesEl}>
           <For each={messages()}>
@@ -151,7 +169,7 @@ export default function ChatPage() {
                     </Show>
                   </div>
                 </Show>
-                <div class={message.userId ? "chat-message-bubble text-break" : undefined}>{message.content}</div>
+                <div class={message.userId ? "chat-message-bubble text-break-all" : undefined}>{message.content}</div>
               </div>
             )}
           </For>
@@ -191,9 +209,11 @@ export default function ChatPage() {
             </div>
 
             <div class="modal-body">
-              <p class="text-break">
+              <p>
                 <span class="d-block mb-1">Share this link:</span>
-                <a href={inviteLink}>{inviteLink}</a>
+                <a class="text-break-all" href={inviteLink}>
+                  {inviteLink}
+                </a>
               </p>
               <p class="mb-2">Or scan this QR:</p>
               <QR content={inviteLink} />

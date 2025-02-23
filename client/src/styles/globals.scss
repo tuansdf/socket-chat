@@ -44,3 +44,8 @@ body {
   white-space: pre-line;
   color: var(--bs-emphasis-color);
 }
+
+.text-break-all {
+  word-wrap: break-word;
+  word-break: break-all;
+}
