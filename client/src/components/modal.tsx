@@ -9,7 +9,7 @@ type Props = {
 };
 
 export const Modal = (props: Props) => {
-  let modalRef: HTMLDivElement;
+  let modalRef!: HTMLDivElement;
   let modal: BModal | undefined;
 
   const getModal = (): BModal | undefined => {
