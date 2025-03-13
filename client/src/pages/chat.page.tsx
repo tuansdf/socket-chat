@@ -154,7 +154,7 @@ export default function ChatPage() {
             {(message) => (
               <div
                 class={cn(
-                  "d-flex flex-column mt-2 text-secondary-emphasis",
+                  "d-flex flex-column mt-3 text-secondary-emphasis",
                   !message.userId
                     ? "align-items-center"
                     : userId === message.userId
@@ -163,7 +163,7 @@ export default function ChatPage() {
                 )}
               >
                 <Show when={message.userId}>
-                  <div class="mb-2">
+                  <div class="mb-2 fs-small">
                     <Show when={userId !== message.userId}>
                       <span>{toShortId(message.userId)} - </span>
                     </Show>
