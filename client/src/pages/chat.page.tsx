@@ -1,7 +1,8 @@
+import { Modal } from "@/components/modal.tsx";
 import { cn } from "@/utils/classnames.ts";
 import { A, useLocation, useNavigate, useParams } from "@solidjs/router";
 import dayjs from "dayjs";
-import { createSignal, createUniqueId, For, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { QR } from "../components/qr.tsx";
 import {
   EVENT_SEND_MESSAGE,
@@ -25,14 +26,16 @@ const encryptMetadata = async (metadata: Metadata, password: string) => {
 };
 
 export default function ChatPage() {
+  const [isModalOpen, setIsModalOpen] = createSignal<boolean>(true);
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
   const [isConnected, setIsConnected] = createSignal<boolean>(false);
   const [message, setMessage] = createSignal<string>("");
   const [messages, setMessages] = createSignal<{ userId?: string; content: string; timestamp: Date }[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ roomId: string }>();
-
-  const modalId = createUniqueId();
 
   let messagesEl!: HTMLDivElement;
   let inputEl!: HTMLTextAreaElement;
@@ -140,7 +143,7 @@ export default function ChatPage() {
               </button>
             </Show>
             <Show when={isConnected()}>
-              <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target={`#${modalId}`}>
+              <button class="btn btn-outline-light" onClick={openModal}>
                 Invite
               </button>
             </Show>
@@ -200,33 +203,16 @@ export default function ChatPage() {
         </form>
       </main>
 
-      <div class="modal fade" id={modalId} tabIndex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h1 class="modal-title fs-5">Invite others</h1>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-              <p>
-                <span class="d-block mb-1">Share this link:</span>
-                <a class="text-break-all" href={inviteLink}>
-                  {inviteLink}
-                </a>
-              </p>
-              <p class="mb-2">Or scan this QR:</p>
-              <QR content={inviteLink} />
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Modal isOpen={isModalOpen()} onClose={closeModal} title="Invite others">
+        <p>
+          <span class="d-block mb-1">Share this link:</span>
+          <a class="text-break-all" href={inviteLink}>
+            {inviteLink}
+          </a>
+        </p>
+        <p class="mb-2">Or scan this QR:</p>
+        <QR content={inviteLink} />
+      </Modal>
     </>
   );
 }

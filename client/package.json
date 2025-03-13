@@ -19,6 +19,7 @@
     "solid-js": "^1.9.4"
   },
   "devDependencies": {
+    "@types/bootstrap": "^5.2.10",
     "@types/pako": "^2.0.3",
     "@types/qrcode": "^1.5.5",
     "postcss": "^8.4.49",
