@@ -1,3 +1,4 @@
+import viteLegacyPlugin from "@vitejs/plugin-legacy";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import solid from "vite-plugin-solid";
@@ -7,9 +8,10 @@ export default defineConfig({
   plugins: [
     solid(),
     tsconfigPaths(),
+    viteLegacyPlugin(),
     VitePWA({
       registerType: "autoUpdate",
-      manifest: { theme_color: "#ffffff" },
+      manifest: { name: "SocketChat", short_name: "SocketChat", theme_color: "#ffffff" },
       workbox: { maximumFileSizeToCacheInBytes: 3000000 },
     }),
   ],
